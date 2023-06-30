@@ -11,7 +11,7 @@ export const routes: RouteRecordRaw[] = [
       {
         path: '/home',
         name: 'home',
-        component: () => import('~/src/views/home.vue'),
+        component: () => import('~/src/views/home/index.vue'),
       },
       {
         path: '/testNet',
