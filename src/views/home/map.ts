@@ -88,8 +88,18 @@ export function createFirePoint(stage: Konva.Stage, config: NodeConfig) {
       y: config.y,
       width: fireIconSize,
       height: fireIconSize,
+      shadowColor: 'white',
+      shadowBlur: 0,
+      shadowOffset: { x: 0, y: 0 },
+      shadowOpacity: 0.9,
     })
     fireLayer.add(darthNode)
+    darthNode.on('mouseenter', () => {
+      darthNode.shadowBlur(10)
+    })
+    darthNode.on('mouseleave', () => {
+      darthNode.shadowBlur(0)
+    })
     darthNode.on('click', () => {
       if (group.opacity())
         return fade(group).hide()
@@ -123,17 +133,16 @@ export function createPipeNode(stage: Konva.Stage, configs: NodeConfig[]) {
       y: 0,
       width: 100,
       height: 50,
-      fill: '#1F2937 ',
-      stroke: '#466481',
+      fill: '#1F2836',
+      stroke: '#395D7E',
       strokeWidth: 6,
-      opacity: 0.7,
     })
     nodeGroup.add(node)
 
     const text = new Konva.Text({
       text: config.text || '',
       fontSize: 16,
-      fill: '#ddd',
+      fill: '#395D7E',
       x: 0,
       y: 0,
       offsetX: 0,
