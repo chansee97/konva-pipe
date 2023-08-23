@@ -3,131 +3,191 @@ import Konva from 'konva'
 interface NodeConfig {
   x: number
   y: number
-  text?: string
 }
-export function createMapBackground(stage: Konva.Stage) {
-  const bgLayer = new Konva.Layer()
-  Konva.Image.fromURL('/assets/demo-bg.png', (darthNode) => {
-    darthNode.setAttrs({
-      x: 0,
-      y: 0,
-      width: stage.width(),
-      height: stage.height(),
-    })
-    bgLayer.add(darthNode)
-  })
-  stage.add(bgLayer)
+interface PipeNodeConfig extends NodeConfig {
+  text: string
 }
-export function createFirePoint(stage: Konva.Stage, config: NodeConfig) {
-  const fireLabelLayer = new Konva.Layer()
-  const fireLayer = new Konva.Layer()
 
-  // 创建label绑定组
-  const group = new Konva.Group({
-    x: 0,
-    y: 0,
+interface EventNodeConfig extends NodeConfig {
+  type: 'end' | 'start' | 'warning' | 'fire'
+  size?: number
+}
+
+interface initMapConfig extends Konva.StageConfig {
+  mapBackgroundImgUrl: string
+}
+
+export class PipeMap {
+  /* 地图舞台 */
+  private stage: Konva.Stage
+  /* 背景层 */
+  private bgLayer = new Konva.Layer()
+
+  /* 管廊节点层 （不可交互） */
+  private pipeLayer = new Konva.Layer()
+
+  /* 事件标记层（可点击交互） */
+  private eventLayer = new Konva.Layer()
+
+  /* 数据弹框层 */
+  private modalLayer = new Konva.Layer({
     visible: false,
-    draggable: true,
-    opacity: 0,
   })
 
-  fireLabelLayer.add(group)
+  /* 地图内置素材 */
+  private material = {
+  /* 开始点图标 */
+    end: new URL('./assets/start.png', import.meta.url).href,
+    /* 结束点图标 */
+    start: new URL('./assets/end.png', import.meta.url).href,
+    /* 火点图标 */
+    fire: new URL('./assets/fire.png', import.meta.url).href,
+    /* 警报图标 */
+    warning: new URL('./assets/warning.png', import.meta.url).href,
+    /* 窗口关闭图标 */
+    close: new URL('./assets/close.png', import.meta.url).href,
+    model: new URL('./assets/modal-border.png', import.meta.url).href,
+  }
 
-  // 创建label容器
-  const labelContainer = new Konva.Rect({
-    width: 300,
-    height: 200,
-    fill: '#113E71',
-    stroke: '#0783FA',
-    strokeWidth: 2,
-    opacity: 0.7,
-  })
-  group.add(labelContainer)
+  constructor(config: initMapConfig) {
+    this.stage = new Konva.Stage(config)
+    this.setMapBackground(config.mapBackgroundImgUrl)
+  }
 
-  // 创建label的标签文本
-  const labelText = new Konva.Text({
-    text: '检测时间',
-    fontSize: 12,
-    fill: '#C6D1DB',
-    offsetX: 0,
-    offsetY: 0,
-  })
-  group.add(labelText)
-  // 创建label的内容文本内容
-  const contentText = new Konva.Text({
-    text: '2023/1/1 12:15:23',
-    fontSize: 24,
-    fill: '#FFFFFF',
-    offsetX: 0,
-    offsetY: -12,
-  })
-  group.add(contentText)
-
-  // 创建关闭按钮
-  const closeButtonSize = 20
-  const closeButtonPadding = 5
-  Konva.Image.fromURL('/assets/modal-close.png', (darthNode) => {
-    darthNode.setAttrs({
-      x: labelContainer.width() - closeButtonSize - closeButtonPadding,
-      y: closeButtonPadding,
-      width: closeButtonSize,
-      height: closeButtonSize,
-    })
-    darthNode.on('click', () => {
-      fade(group).hide()
-    })
-    setCursor(stage, darthNode)
-    group.add(darthNode)
-  })
-
-  // 创建火点图标
-  const fireIconSize = 30
-  Konva.Image.fromURL('/assets/fire-pointer.png', (darthNode) => {
-    darthNode.setAttrs({
-      x: config.x,
-      y: config.y,
-      width: fireIconSize,
-      height: fireIconSize,
-      shadowColor: 'white',
-      shadowBlur: 0,
-      shadowOffset: { x: 0, y: 0 },
-      shadowOpacity: 0.9,
-    })
-    fireLayer.add(darthNode)
-    darthNode.on('mouseenter', () => {
-      darthNode.shadowBlur(10)
-    })
-    darthNode.on('mouseleave', () => {
-      darthNode.shadowBlur(0)
-    })
-    darthNode.on('click', () => {
-      if (group.opacity())
-        return fade(group).hide()
-
-      group.position({
-        x: darthNode.x() - ((labelContainer.width() - darthNode.width()) / 2),
-        y: darthNode.y() - labelContainer.height() - 5,
+  /* 设置地图  */
+  setMapBackground(imgURL: string) {
+    Konva.Image.fromURL(imgURL, (darthNode) => {
+      darthNode.setAttrs({
+        x: 0,
+        y: 0,
+        width: this.stage.width(),
+        height: this.stage.height(),
       })
-      fade(group).show()
+      this.bgLayer.add(darthNode)
     })
 
-    setCursor(stage, darthNode)
-  })
+    this.stage.add(this.bgLayer)
+  }
 
-  stage.add(fireLayer)
-  stage.add(fireLabelLayer)
-}
+  /* 添加事件标记 */
+  setEventNode(config: EventNodeConfig) {
+    if (!this.material[config.type])
+      throw new Error('请检查config中的type字段是否正确')
 
-export function createPipeNode(stage: Konva.Stage, configs: NodeConfig[]) {
-  const pipeLayer = new Konva.Layer()
+    const defaultSize = 30
+    // 创建火点图标
+    Konva.Image.fromURL(this.material[config.type], (darthNode) => {
+      darthNode.setAttrs({
+        x: config.x,
+        y: config.y,
+        width: config.size || defaultSize,
+        height: config.size || defaultSize,
+        shadowColor: 'white',
+        shadowBlur: 0,
+        shadowOffset: { x: 0, y: 0 },
+        shadowOpacity: 0.9,
+      })
+      this.eventLayer.add(darthNode)
+      darthNode.on('mouseenter', () => {
+        darthNode.shadowBlur(10)
+      })
+      darthNode.on('mouseleave', () => {
+        darthNode.shadowBlur(0)
+      })
+      darthNode.on('click', () => {
+        if (this.modalLayer.visible())
+          return this.setFade(this.modalLayer).hide()
 
-  function generateNode(config: NodeConfig) {
+        this.setFade(this.modalLayer).show()
+      })
+
+      this.setCursor(darthNode)
+    })
+    this.stage.add(this.eventLayer)
+  }
+
+  /* 生成弹框层 */
+  setModal() {
+    // 创建label容器
+    const labelContainer = new Konva.Rect({
+      width: 600,
+      height: 300,
+    })
+
+    // 创建label绑定组
+    const group = new Konva.Group({
+      x: (this.stage.width() - labelContainer.width()) / 2,
+      y: (this.stage.height() - labelContainer.height()) / 2,
+    })
+
+    Konva.Image.fromURL(this.material.model, (darthNode) => {
+      darthNode.setAttrs({
+        width: labelContainer.width(),
+        height: labelContainer.height(),
+      })
+      group.add(darthNode)
+    })
+
+    // 创建label的标签文本
+    const modalTitle = new Konva.Text({
+      text: '一级告警',
+      fontSize: 24,
+      fontStyle: 'bold',
+      fill: '#1C7BD2',
+      offsetX: -20,
+      offsetY: -10,
+    })
+
+    // 创建label的标签文本
+    const labelText = new Konva.Text({
+      text: '检测时间',
+      fontSize: 12,
+      fill: '#C6D1DB',
+      offsetX: -20,
+      offsetY: -100,
+    })
+    // 创建label的内容文本内容
+    const contentText = new Konva.Text({
+      text: '2023/1/1 12:15:23',
+      fontSize: 24,
+      fill: '#FFFFFF',
+      fontStyle: 'bold',
+      offsetX: -20,
+      offsetY: -120,
+    })
+    // 创建关闭按钮
+    const closeButtonSize = 20
+    Konva.Image.fromURL(this.material.close, (darthNode) => {
+      darthNode.setAttrs({
+        offsetX: -(labelContainer.width() - closeButtonSize - 20),
+        offsetY: -30,
+        width: closeButtonSize,
+        height: closeButtonSize,
+      })
+      darthNode.on('click', () => {
+        this.setFade(this.modalLayer).hide()
+      })
+      this.setCursor(darthNode)
+      group.add(darthNode)
+    })
+    group.add(labelContainer, modalTitle, labelText, contentText)
+
+    this.modalLayer.add(group)
+    this.stage.add(this.modalLayer)
+  }
+
+  /* 设置事件点 */
+  setEventPoint(config: EventNodeConfig) {
+    this.setEventNode(config)
+    this.setModal()
+  }
+
+  /* 生成管廊节点 */
+  generatePipeNode(config: PipeNodeConfig) {
     const nodeGroup = new Konva.Group({
       x: config.x,
       y: config.y,
     })
-    pipeLayer.add(nodeGroup)
-
     const node = new Konva.Rect({
       x: 0,
       y: 0,
@@ -159,47 +219,70 @@ export function createPipeNode(stage: Konva.Stage, configs: NodeConfig[]) {
       y: (node.height() - text.height()) / 2,
     })
     nodeGroup.add(text)
+    return nodeGroup
   }
-  configs.forEach(config => generateNode(config))
-  stage.add(pipeLayer)
-}
 
-function fade(node: Konva.Node) {
-  const commonConfig = {
-    node,
-    easing: Konva.Easings.EaseOut,
-    duration: 0.3,
-  }
-  return {
-    show() {
-      node.show()
-      const fade = new Konva.Tween({
-        ...commonConfig,
-        opacity: 1,
-
-        offsetY: 10,
+  /* 设置管廊节点 */
+  setPipeNode(configs: PipeNodeConfig[] | PipeNodeConfig, stage = this.stage) {
+    /* 清除所有元素 */
+    this.pipeLayer.destroyChildren()
+    /* 根据传入参数类型做不同操作 */
+    if (Array.isArray(configs)) {
+      configs.forEach((config) => {
+        const pipeNode = this.generatePipeNode(config)
+        this.pipeLayer.add(pipeNode)
       })
-      fade.play()
-    },
-    hide() {
-      const fade = new Konva.Tween({
-        ...commonConfig,
-        opacity: 0,
-        offsetY: -10,
-        onFinish() {
-          node.hide()
-        },
-      })
-      fade.play()
-    },
+    }
+    else {
+      const pipeNode = this.generatePipeNode(configs)
+      this.pipeLayer.add(pipeNode)
+    }
+    stage.add(this.pipeLayer)
   }
-}
 
-function setCursor(stage: Konva.Stage, node: Konva.Node, type = 'pointer') {
-  node.on('mouseenter', () => {
-    stage.container().style.cursor = type
-  })
-  node.on('mouseleave', () => {
-    stage.container().style.cursor = 'default'
-  })
+  /* 设置节点鼠标样式 */
+  setCursor(node: Konva.Node, type = 'pointer') {
+    node.on('mouseenter', () => {
+      this.stage.container().style.cursor = type
+    })
+    node.on('mouseleave', () => {
+      this.stage.container().style.cursor = 'default'
+    })
+  }
+
+  /* 设置节点过度 */
+  setFade(node: Konva.Node) {
+    const commonConfig = {
+      node,
+      easing: Konva.Easings.EaseOut,
+      duration: 0.3,
+    }
+    return {
+      show() {
+        node.opacity(0)
+        node.show()
+        const fade = new Konva.Tween({
+          ...commonConfig,
+          opacity: 1,
+          offsetY: 10,
+        })
+        fade.play()
+      },
+      hide() {
+        const fade = new Konva.Tween({
+          ...commonConfig,
+          opacity: 0,
+          offsetY: -10,
+          onFinish() {
+            node.hide()
+          },
+        })
+        fade.play()
+      },
+    }
+  }
+
+  rerender() {
+    this.stage.draw()
+  }
 }

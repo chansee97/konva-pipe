@@ -13,11 +13,6 @@ export const routes: RouteRecordRaw[] = [
         name: 'home',
         component: () => import('~/src/views/home/index.vue'),
       },
-      {
-        path: '/testNet',
-        name: 'testNet',
-        component: () => import('~/src/views/testNet.vue'),
-      },
     ],
   },
   {
