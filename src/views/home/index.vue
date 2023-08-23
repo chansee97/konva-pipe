@@ -50,6 +50,10 @@ function setEventNode() {
     size: 60,
   })
 }
+
+function setRoute() {
+  map.setRouteLine([100, 100, 150, 130, 300, 100])
+}
 </script>
 
 <template>
@@ -64,6 +68,9 @@ function setEventNode() {
       </n-button>
       <n-button @click="setEventNode">
         设置一个事件
+      </n-button>
+      <n-button @click="setRoute ">
+        设置线路
       </n-button>
     </div>
   </div>

@@ -240,6 +240,30 @@ export class PipeMap {
     stage.add(this.pipeLayer)
   }
 
+  /* 设置线路 */
+  setRouteLine(points: number[]) {
+    const route = new Konva.Line({
+      points,
+      stroke: '#D8DBD8',
+      strokeWidth: 6,
+      lineCap: 'round',
+      lineJoin: 'round',
+      dash: [33, 10],
+    })
+
+    const anim = new Konva.Animation((frame) => {
+      route.dashOffset((frame.time * 5 * Math.PI) / 2000)
+    }, this.pipeLayer)
+
+    anim.start()
+
+    route.on('removed', () => {
+      anim.stop()
+    })
+
+    this.pipeLayer.add(route)
+  }
+
   /* 设置节点鼠标样式 */
   setCursor(node: Konva.Node, type = 'pointer') {
     node.on('mouseenter', () => {
